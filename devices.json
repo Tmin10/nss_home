@@ -1,0 +1,103 @@
+{
+    "devices": [
+        {
+            "model": "gateway",
+            "name": "Mi Home Gateway",
+            "states": [
+                {
+                    "name": "rgb",
+                    "type": "integer"
+                },
+                {
+                    "name": "illumination",
+                    "type": "integer"
+                }
+            ]
+        },
+        {
+            "model": "motion",
+            "name": "Motion Sensor",
+            "states": [
+                {
+                    "name": "status",
+                    "type": "enum",
+                    "enum": [
+                        "motion"
+                    ]
+                },
+                {
+                    "name": "no_motion",
+                    "type": "enum",
+                    "enum": [
+                        "120",
+                        "180",
+                        "300",
+                        "600",
+                        "1200",
+                        "1800"
+                    ]
+                }
+            ]
+        },
+        {
+            "model": "sensor_ht",
+            "name": "Temperature and Humidity Sensor",
+            "states": [
+                {
+                    "name": "temperature",
+                    "type": "string"
+                },
+                {
+                    "name": "humidity",
+                    "type": "string"
+                }
+            ]
+        },
+        {
+            "model": "switch",
+            "name": "Wireless Switch",
+            "states": [
+                {
+                    "name": "status",
+                    "type": "enum",
+                    "enum": [
+                        "click",
+                        "double_click",
+                        "long_click_press",
+                        "long_click_release"
+                    ]
+                }
+            ]
+        },
+        {
+            "model": "remote.b1acn01",
+            "name": "Wireless Switch",
+            "states": [
+                {
+                    "name": "status",
+                    "type": "enum",
+                    "enum": [
+                        "click",
+                        "double_click",
+                        "long_click_press",
+                        "long_click_release"
+                    ]
+                }
+            ]
+        },
+        {
+            "model": "magnet",
+            "name": "Magnet Sensor",
+            "states": [
+                {
+                    "name": "status",
+                    "type": "enum",
+                    "enum": [
+                        "open",
+                        "close"
+                    ]
+                }
+            ]
+        }
+    ]
+}
