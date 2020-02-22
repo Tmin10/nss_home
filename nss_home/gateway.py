@@ -3,18 +3,24 @@ import logging
 import socket
 import struct
 import threading
+from time import sleep
+
+from Crypto.Cipher import AES
 
 from .constants import *
 
 module_logger = logging.getLogger('nss_home.gateway')
 
+IV = b'\x17\x99\x6d\x09\x3d\x28\xdd\xb3\xba\x69\x5a\x2e\x6f\x58\x56\x2e'
+
 
 class Gateway:
-    def __init__(self):
+    def __init__(self, password):
         self.gateway_info: GatewayInfo = None
         self._handlers = []
         self._listener = None
         self._token = None
+        self._password = password
         self._logger = logging.getLogger('nss_home.gateway.Gateway')
         self._gateway_discovery()
 
@@ -61,6 +67,11 @@ class Gateway:
                 for handler in self._handlers:
                     handler(data)
 
+    def _get_key(self):
+        if self._token:
+            obj = AES.new(self._password.encode(), AES.MODE_CBC, IV)
+            return obj.encrypt(self._token.encode()).hex()[0:32]
+
     def get_devices_list(self) -> list:
         sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         message = '{"cmd" : "get_id_list"}'
@@ -80,6 +91,16 @@ class Gateway:
         return json.loads(data)
 
     # def set_device_status(self, device_id, command):
+    #     self._token_check()
+
+    def _token_check(self):
+        seconds_to_wait = 100
+        while not self._token and seconds_to_wait > 0:
+            self._logger.info("Waiting for token")
+            sleep(10)
+            seconds_to_wait -= 10
+        if seconds_to_wait <= 0:
+            raise Exception("Fail to send command to device")
 
     def set_events_handler(self, handler):
         self._handlers.append(handler)

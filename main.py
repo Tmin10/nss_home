@@ -11,7 +11,7 @@ logger.addHandler(ch)
 
 
 def main():
-    gw = Gateway()
+    gw = Gateway("")
     devices = gw.get_devices_list()
     devices.append(gw.gateway_info.sid)
     for device_id in devices:
