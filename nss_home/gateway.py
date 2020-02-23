@@ -9,9 +9,9 @@ from Crypto.Cipher import AES
 
 from .constants import *
 
-module_logger = logging.getLogger('nss_home.gateway')
+module_logger = logging.getLogger("nss_home.gateway")
 
-IV = b'\x17\x99\x6d\x09\x3d\x28\xdd\xb3\xba\x69\x5a\x2e\x6f\x58\x56\x2e'
+IV = b"\x17\x99\x6d\x09\x3d\x28\xdd\xb3\xba\x69\x5a\x2e\x6f\x58\x56\x2e"
 
 
 class Gateway:
@@ -21,17 +21,20 @@ class Gateway:
         self._listener = None
         self._token = None
         self._password = password
-        self._logger = logging.getLogger('nss_home.gateway.Gateway')
+        self._logger = logging.getLogger("nss_home.gateway.Gateway")
         self._gateway_discovery()
 
     def _gateway_discovery(self):
         self._logger.info("Starting gateway discovery")
         sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         sock.settimeout(10)
-        ttl = struct.pack('b', 1)
+        ttl = struct.pack("b", 1)
         sock.setsockopt(socket.IPPROTO_IP, socket.IP_MULTICAST_TTL, ttl)
         self._logger.debug(GATEWAY_DISCOVERY_COMMAND)
-        sock.sendto(GATEWAY_DISCOVERY_COMMAND.encode(), (MULTICAST_GROUP, GATEWAY_DISCOVERY_PORT))
+        sock.sendto(
+            GATEWAY_DISCOVERY_COMMAND.encode(),
+            (MULTICAST_GROUP, GATEWAY_DISCOVERY_PORT),
+        )
         try:
             data, address = sock.recvfrom(1024)
             self._logger.debug(data.decode())
@@ -52,20 +55,19 @@ class Gateway:
 
     def _event_listener(self):
         sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        sock.bind(('', GATEWAY_COMMANDS_PORT))
+        sock.bind(("", GATEWAY_COMMANDS_PORT))
         group = socket.inet_aton(MULTICAST_GROUP)
-        mreq = struct.pack('4sL', group, socket.INADDR_ANY)
+        mreq = struct.pack("4sL", group, socket.INADDR_ANY)
         sock.setsockopt(socket.IPPROTO_IP, socket.IP_ADD_MEMBERSHIP, mreq)
         sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         while len(self._handlers) > 0:
             data, address = sock.recvfrom(1024)
             self._logger.debug(data.decode())
             data = json.loads(data)
-            if data['cmd'] == "heartbeat" and data['model'] == 'gateway':
-                self._token = data['token']
-            else:
-                for handler in self._handlers:
-                    handler(data)
+            if data["cmd"] == "heartbeat" and data["model"] == "gateway":
+                self._token = data["token"]
+            for handler in self._handlers:
+                handler(data)
 
     def _get_key(self):
         if self._token:
@@ -112,7 +114,7 @@ class Gateway:
 
 class GatewayInfo:
     def __init__(self, gateway_whois_response):
-        self.ip = gateway_whois_response['ip']
-        self.sid = gateway_whois_response['sid']
-        self.model = gateway_whois_response['model']
-        self.proto_version = gateway_whois_response['proto_version']
+        self.ip = gateway_whois_response["ip"]
+        self.sid = gateway_whois_response["sid"]
+        self.model = gateway_whois_response["model"]
+        self.proto_version = gateway_whois_response["proto_version"]
