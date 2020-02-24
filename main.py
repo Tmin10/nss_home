@@ -54,10 +54,24 @@ def gateway_events_handler(data):
                     "sid": data["sid"],
                     "short_id": int(data["short_id"]),
                 },
-                "fields": json.loads(data["data"]),
+                "fields": normalize_sensors_data(json.loads(data["data"])),
             }
         ]
     )
+
+
+def normalize_sensors_data(data):
+    transformations = {
+        "voltage": lambda voltage: voltage / 1000,
+        "humidity": lambda humidity: int(humidity) / 100,
+        "temperature": lambda humidity: int(humidity) / 100,
+        "no_motion": lambda no_motion: int(no_motion),
+        "rgb": lambda rgb: hex(rgb)[2:],
+    }
+    for field in data.keys():
+        if transformations.get(field):
+            data[field] = transformations[field](data[field])
+    return data
 
 
 if __name__ == "__main__":
