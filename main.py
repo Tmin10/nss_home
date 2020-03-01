@@ -1,8 +1,10 @@
 import json
 import os
 import logging
+import threading
 
 from influxdb import InfluxDBClient
+from miio import AirPurifier
 
 from nss_home import *
 
@@ -20,6 +22,9 @@ INFLUXDB_PORT = os.environ.get("INFLUXDB_PORT", 8086)
 INFLUXDB_USER = os.environ["INFLUXDB_USER"]
 INFLUXDB_PASSWORD = os.environ["INFLUXDB_PASSWORD"]
 INFLUXDB_DB = os.environ["INFLUXDB_DB"]
+
+AIR_PURIFIER_IP = os.environ["AIR_PURIFIER_IP"]
+AIR_PURIFIER_TOKEN = os.environ["AIR_PURIFIER_TOKEN"]
 
 INFLUXDB_CLIENT = None
 
@@ -40,6 +45,8 @@ def main():
         print(gw.get_device_status(device_id))
 
     gw.set_events_handler(gateway_events_handler)
+
+    log_air_purifier_events()
 
 
 def gateway_events_handler(data):
@@ -72,6 +79,42 @@ def normalize_sensors_data(data):
         if transformations.get(field):
             data[field] = transformations[field](data[field])
     return data
+
+
+def log_air_purifier_events():
+    threading.Timer(60.0 * 10, log_air_purifier_events).start()
+    values_keys = [
+        "power",
+        "aqi",
+        "average_aqi",
+        "humidity",
+        "temperature",
+        "illuminance",
+        "filter_life_remaining",
+        "filter_hours_used",
+        "motor_speed",
+    ]
+    air_purifier = AirPurifier(AIR_PURIFIER_IP, AIR_PURIFIER_TOKEN)
+    status = air_purifier.status()
+    data = {}
+    for key in values_keys:
+        data[key] = status.__getattribute__(key)
+    data["mode"] = status.mode.value
+    print(data)
+    device_info = air_purifier.info()
+    INFLUXDB_CLIENT.write_points(
+        [
+            {
+                "measurement": "air_purifier",
+                "tags": {
+                    "model": device_info.model,
+                    "firmware_version": device_info.firmware_version,
+                    "hardware_version": device_info.hardware_version,
+                },
+                "fields": data,
+            }
+        ]
+    )
 
 
 if __name__ == "__main__":
