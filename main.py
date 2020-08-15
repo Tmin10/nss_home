@@ -2,6 +2,7 @@ import json
 import os
 import logging
 import threading
+import socket
 
 from influxdb import InfluxDBClient
 from miio import AirPurifier
@@ -26,6 +27,9 @@ INFLUXDB_DB = os.environ["INFLUXDB_DB"]
 AIR_PURIFIER_IP = os.environ["AIR_PURIFIER_IP"]
 AIR_PURIFIER_TOKEN = os.environ["AIR_PURIFIER_TOKEN"]
 
+UPS_IP = os.environ["UPS_IP"]
+UPS_PORT = os.environ.get("UPS_PORT", 3493)
+
 INFLUXDB_CLIENT = None
 
 
@@ -47,6 +51,7 @@ def main():
     gw.set_events_handler(gateway_events_handler)
 
     log_air_purifier_events()
+    log_ups_events()
 
 
 def gateway_events_handler(data):
@@ -115,6 +120,56 @@ def log_air_purifier_events():
             }
         ]
     )
+
+
+def log_ups_events():
+    threading.Timer(60.0 * 10, log_ups_events).start()
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+        s.connect((UPS_IP, UPS_PORT))
+        s.settimeout(10)
+        s.send(b"LIST VAR qnapups\n")
+        data = ""
+        while True:
+            data += s.recv(4048).decode()
+            if data.split("\n")[-2] == "END LIST VAR qnapups":
+                break
+        required_parameters = {
+            "battery.charge": int,
+            "battery.voltage": float,
+            "device.mfr": str,
+            "device.model": str,
+            "input.frequency": float,
+            "input.voltage": float,
+            "output.voltage": float,
+            "ups.load": int,
+            "ups.status": str,
+            "ups.temperature": float,
+        }
+        parameters = {}
+        for line in data.split("\n"):
+            if (
+                not any(keyword in line for keyword in ["BEGIN", "END"])
+                and "VAR" in line
+            ):
+                var = line.split(" ")[2:4]
+                if var[0] in required_parameters:
+                    parameters[var[0]] = required_parameters[var[0]](
+                        var[1].replace('"', "")
+                    )
+        print(parameters)
+        device_mfr = parameters["device.mfr"]
+        device_model = parameters["device.model"]
+        del parameters["device.mfr"]
+        del parameters["device.model"]
+        INFLUXDB_CLIENT.write_points(
+            [
+                {
+                    "measurement": "ups",
+                    "tags": {"device_mfr": device_mfr, "device_model": device_model,},
+                    "fields": parameters,
+                }
+            ]
+        )
 
 
 if __name__ == "__main__":
